@@ -52,8 +52,16 @@ class Game {
         document.body.classList.add(`screen-${this.currentScreen}`);
 
         if (this.currentScreen === 'quiz') {
-            if (quiz === null) quiz = new Quiz(QUIZ_DATA, RESULT_TITLES, this.ui);
-            quiz.startGame();
+            try {
+                if (quiz === null) quiz = new Quiz(QUIZ_DATA, RESULT_TITLES, this.ui);
+                quiz.startGame();
+            } catch (error) {
+                console.error('Không thể khởi tạo round quiz.', error);
+                this.currentScreen = 'menu';
+                this.ui.showScreen('menu');
+                document.body.classList.remove('screen-quiz');
+                document.body.classList.add('screen-menu');
+            }
         }
     }
 

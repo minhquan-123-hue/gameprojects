@@ -3,6 +3,7 @@ const test = require('node:test');
 
 const { parseQuizContent } = require('../src/data/quizContentLoader.js');
 const { QuestionSelector } = require('../src/data/questionSelector.js');
+const { Endgame, RESULT_TITLES } = require('../src/js/endgame.js');
 
 function contentFor(questionBlock) {
     return `images/\ncharacters/\n- test.png:\nimage: ../assets/images/test.png\ncharacter: test\n${questionBlock}`;
@@ -99,6 +100,90 @@ test('selector: replenishes an exhausted category pool', () => {
     assert.equal(firstRound[0].character, 'hiv');
     assert.equal(secondRound[0].character, 'syphilis');
     assert.equal(thirdRound[0].character, 'hiv');
+});
+
+test('scoring: correct answers add one and wrong answers add nothing', () => {
+    global.GAME_CONFIG = { questionsPerCategory: {} };
+    global.QuestionSelector = class {};
+    global.Endgame = Endgame;
+    global.RESULT_TITLES = RESULT_TITLES;
+    global.audioManager = { playCorrect() {}, playWrong() {} };
+    const { Quiz } = require('../src/js/quiz.js');
+    const ui = {
+        bindQuizInteractions() {},
+        renderAnswer() {},
+        renderScore() {}
+    };
+    const quiz = new Quiz([], RESULT_TITLES, ui);
+    quiz.selectedQuestions = [
+        { question: 'first', answers: ['a', 'b', 'c', 'd'], correctIndex: 1 },
+        { question: 'second', answers: ['a', 'b', 'c', 'd'], correctIndex: 2 },
+        { question: 'third', answers: ['a', 'b', 'c', 'd'], correctIndex: 0 }
+    ];
+
+    quiz.handleAnswer(1);
+    assert.equal(quiz.score, 1);
+
+    quiz.currentQuestion = 1;
+    quiz.answered = false;
+    quiz.handleAnswer(0);
+    assert.equal(quiz.score, 1);
+});
+
+test('gameplay: completes a seven-question round after the final answer', () => {
+    global.GAME_CONFIG = { questionsPerCategory: { round: 7 } };
+    global.QuestionSelector = class {
+        createRound() {
+            return Array.from({ length: 7 }, (_, index) => ({
+                question: `question-${index}`,
+                answers: ['a', 'b', 'c', 'd'],
+                correctIndex: 0,
+                image: `image-${index}.png`,
+                character: `character-${index}`
+            }));
+        }
+    };
+    global.audioManager = {
+        playCorrect() {},
+        playWrong() {},
+        playNextQuestion() {},
+        playFinalRound() {}
+    };
+    const { Quiz } = require('../src/js/quiz.js');
+    const ui = {
+        bindQuizInteractions() {},
+        renderQuestion() {},
+        renderAnswer() {},
+        renderScore() {}
+    };
+    let ended = false;
+    global.game = { endGame: () => { ended = true; } };
+    global.endgame = { showResults() {} };
+    const quiz = new Quiz([], RESULT_TITLES, ui);
+
+    quiz.startGame();
+    assert.equal(quiz.totalQuestions, 7);
+
+    for (let index = 0; index < 7; index++) {
+        quiz.handleAnswer(0);
+        if (index < 6) quiz.nextQuestion();
+    }
+
+    assert.equal(quiz.score, 7);
+    assert.equal(ended, true);
+});
+
+test('result scoring: scores 0-2 share the first result and 5-7 use the highest result', () => {
+    const endgame = new Endgame(RESULT_TITLES, {});
+
+    assert.equal(endgame.getResultData(0), RESULT_TITLES[0]);
+    assert.equal(endgame.getResultData(1), RESULT_TITLES[0]);
+    assert.equal(endgame.getResultData(2), RESULT_TITLES[0]);
+    assert.equal(endgame.getResultData(3), RESULT_TITLES[3]);
+    assert.equal(endgame.getResultData(4), RESULT_TITLES[4]);
+    assert.equal(endgame.getResultData(5), RESULT_TITLES[5]);
+    assert.equal(endgame.getResultData(6), RESULT_TITLES[5]);
+    assert.equal(endgame.getResultData(7), RESULT_TITLES[5]);
 });
 
 class FakeElement {

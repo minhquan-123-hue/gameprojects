@@ -35,21 +35,32 @@ const RESULT_TITLES = {
     }
 };
 
+const RESULT_SCORE_BANDS = [
+    { maxScore: 2, resultKey: 0 },
+    { maxScore: 3, resultKey: 3 },
+    { maxScore: 4, resultKey: 4 },
+    { maxScore: 7, resultKey: 5 }
+];
+
 class Endgame {
     constructor(resultTitles, ui) {
         this.resultTitles = resultTitles;
         this.ui = ui;
     }
 
+    getResultData(score) {
+        const band = RESULT_SCORE_BANDS.find(({ maxScore }) => score <= maxScore);
+        const resultKey = band ? band.resultKey : RESULT_SCORE_BANDS.at(-1).resultKey;
+        return this.resultTitles[resultKey];
+    }
+
     /**
      * Hiển thị kết quả game
-     * @param {Object} scores - Object chứa {dick, pussy, master}
      */
-    showResults(scores, totalQuestions) {
-        const totalScore = scores.dick + scores.pussy + scores.master;
-        const resultData = this.resultTitles[totalScore] || this.resultTitles[5];
+    showResults(score, totalQuestions) {
+        const resultData = this.getResultData(score);
 
-        this.ui.renderResult(resultData, scores, totalQuestions);
+        this.ui.renderResult(resultData, score, totalQuestions);
 
         if (audioManager) {
             audioManager.playFinalRound();
@@ -61,3 +72,7 @@ class Endgame {
 }
 
 let endgame = null;
+
+if (typeof module !== 'undefined') {
+    module.exports = { Endgame, RESULT_TITLES, RESULT_SCORE_BANDS };
+}

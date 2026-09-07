@@ -3,8 +3,7 @@
  * Xử lý logic quiz game
  *
  * Chức năng:
- * - Mỗi lượt chọn số nhân vật theo GAME_CONFIG không trùng
- * - Mỗi nhân vật chọn ngẫu nhiên 1 trong 2 câu hỏi
+ * - Tạo round theo quota từng category
  * - Quản lý flow quiz (hiển thị câu hỏi, xử lý câu trả lời)
  * - Tính điểm
  * - Hiển thị kết quả
@@ -22,11 +21,7 @@ class Quiz {
         );
         this.totalQuestions = this.getRoundQuestionCount();
         this.currentQuestion = 0;
-        this.scores = {
-            dick: 0,
-            pussy: 0,
-            master: 0
-        };
+        this.score = 0;
         this.answered = false;
         this.init();
     }
@@ -52,7 +47,16 @@ class Quiz {
      * Tạo một lượt chơi mới theo quota từng category.
      */
     createRound() {
-        this.selectedQuestions = this.questionSelector.createRound();
+        const selectedQuestions = this.questionSelector.createRound();
+        const expectedQuestionCount = this.getRoundQuestionCount();
+
+        if (selectedQuestions.length !== expectedQuestionCount) {
+            throw new Error(
+                `Round không hợp lệ: cần ${expectedQuestionCount} câu nhưng nhận được ${selectedQuestions.length}.`
+            );
+        }
+
+        this.selectedQuestions = selectedQuestions;
         this.totalQuestions = this.selectedQuestions.length;
     }
 
@@ -83,33 +87,23 @@ class Quiz {
 
         // Kiểm tra đáp án
         if (selectedIndex === question.correctIndex) {
-            this.addScore();
+            this.score++;
             // Play correct sound
-            if (audioManager) {
+            if (typeof audioManager !== 'undefined' && audioManager) {
                 audioManager.playCorrect();
             }
         } else {
             // Play wrong sound
-            if (audioManager) {
+            if (typeof audioManager !== 'undefined' && audioManager) {
                 audioManager.playWrong();
             }
         }
 
         this.ui.renderAnswer(selectedIndex, question.correctIndex);
-        this.ui.renderScores(this.scores);
-    }
+        this.ui.renderScore(this.score);
 
-    /**
-     * Thêm điểm dựa trên vòng
-     */
-    addScore() {
-        const round = this.currentQuestion + 1;
-        if (round % 3 === 1) {
-            this.scores.dick++;
-        } else if (round % 3 === 2) {
-            this.scores.pussy++;
-        } else {
-            this.scores.master++;
+        if (this.currentQuestion === this.selectedQuestions.length - 1) {
+            this.endQuiz();
         }
     }
 
@@ -117,8 +111,13 @@ class Quiz {
      * Chuyển sang câu hỏi tiếp theo
      */
     nextQuestion() {
+        if (this.currentQuestion >= this.selectedQuestions.length - 1) {
+            this.endQuiz();
+            return;
+        }
+
         // Play Mon Wave sound khi chuyển câu
-        if (audioManager) {
+        if (typeof audioManager !== 'undefined' && audioManager) {
             audioManager.playNextQuestion();
         }
         this.loadQuestion(this.currentQuestion + 1);
@@ -129,11 +128,13 @@ class Quiz {
      * Trách nhiệm: Chuyển điểm cho endgame, endgame sẽ xử lý hiển thị
      */
     endQuiz() {
-        if (endgame === null) {
+        if (typeof endgame === 'undefined' || endgame === null) {
             endgame = new Endgame(RESULT_TITLES, this.ui);
         }
-        endgame.showResults(this.scores, this.totalQuestions);
-        game.endGame();
+        endgame.showResults(this.score, this.totalQuestions);
+        if (typeof game !== 'undefined' && game) {
+            game.endGame();
+        }
     }
 
     /**
@@ -149,9 +150,9 @@ class Quiz {
         );
         this.totalQuestions = this.getRoundQuestionCount();
         this.currentQuestion = 0;
-        this.scores = { dick: 0, pussy: 0, master: 0 };
+        this.score = 0;
         this.answered = false;
-        this.ui.renderScores(this.scores);
+        this.ui.renderScore(this.score);
         console.log('Quiz state đã được reset');
     }
 
@@ -163,7 +164,8 @@ class Quiz {
     startGame() {
         console.log(`Game started - creating a new ${this.getRoundQuestionCount()}-question round`);
         this.createRound();
-        this.ui.renderScores(this.scores);
+        this.score = 0;
+        this.ui.renderScore(this.score);
         this.loadQuestion(0);
     }
 
@@ -175,3 +177,7 @@ class Quiz {
 
 // Khởi tạo quiz khi cần thiết (được gọi từ main.js khi chuyển sang quiz screen)
 let quiz = null;
+
+if (typeof module !== 'undefined') {
+    module.exports = { Quiz };
+}

@@ -68,20 +68,15 @@ class GameUI {
         this.btnNext.classList.add('show');
     }
 
-    renderScores(scores) {
-        document.getElementById('dickScore').textContent = scores.dick;
-        document.getElementById('pussyScore').textContent = scores.pussy;
-        document.getElementById('masterScore').textContent = scores.master;
+    renderScore(score) {
+        document.getElementById('masterScore').textContent = score;
     }
 
-    renderResult(resultData, scores, totalQuestions) {
-        const totalScore = scores.dick + scores.pussy + scores.master;
+    renderResult(resultData, score, totalQuestions) {
         document.getElementById('resultTitle').textContent = resultData.title;
         document.getElementById('resultMessage').textContent = resultData.message;
-        document.getElementById('resultScore').textContent = `Điểm: ${totalScore}/${totalQuestions}`;
-        document.getElementById('resultDickScore').textContent = scores.dick;
-        document.getElementById('resultPussyScore').textContent = scores.pussy;
-        document.getElementById('resultMasterScore').textContent = scores.master;
+        document.getElementById('resultScore').textContent = `Điểm: ${score}/${totalQuestions}`;
+        document.getElementById('resultMasterScore').textContent = score;
     }
 }
 
