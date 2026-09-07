@@ -40,6 +40,10 @@ class Game {
             return;
         }
 
+        if (screenName !== 'quiz' && typeof audioManager?.stopGameplay === 'function') {
+            audioManager.stopGameplay();
+        }
+
         console.log(`Chuyển từ '${this.currentScreen}' sang '${screenName}'`);
         this.currentScreen = screenName;
         this.renderScreen();
@@ -55,8 +59,12 @@ class Game {
             try {
                 if (quiz === null) quiz = new Quiz(QUIZ_DATA, RESULT_TITLES, this.ui);
                 quiz.startGame();
+                audioManager.playGameplay();
             } catch (error) {
                 console.error('Không thể khởi tạo round quiz.', error);
+                if (typeof audioManager?.stopGameplay === 'function') {
+                    audioManager.stopGameplay();
+                }
                 this.currentScreen = 'menu';
                 this.ui.showScreen('menu');
                 document.body.classList.remove('screen-quiz');

@@ -8,6 +8,15 @@
  * - Không can thiệp vào logic game
  */
 
+const RESULT_AUDIO_BY_INDEX = Object.freeze({
+    0: 'cum_fast',
+    1: 'dream_cum',
+    2: 'half_ass',
+    3: 'cum_pant',
+    4: 'an_ba_to_cum',
+    5: 'king_cum'
+});
+
 class AudioManager {
     constructor() {
         this.sounds = {};
@@ -23,14 +32,20 @@ class AudioManager {
         const audioAssets = {
             wrong: '../assets/audio/wrong.wav',      // Wrong answer
             right: '../assets/audio/right.wav',      // Correct answer
-            nextQuestion: '../assets/audio/moun.wav', // Move to next question
-            finalRound: '../assets/audio/final_round.wav' // Finish game
+            gameplay: '../assets/audio/jazz.wav',    // Gameplay start
+            cum_fast: '../assets/audio/cum_fast.wav',
+            dream_cum: '../assets/audio/dream_cum.wav',
+            half_ass: '../assets/audio/half_ass.wav',
+            cum_pant: '../assets/audio/cum_pant.wav',
+            an_ba_to_cum: '../assets/audio/an_ba_to_cum.wav',
+            king_cum: '../assets/audio/king_cum.wav'
         };
 
         // Load tất cả audio files
         for (const [key, path] of Object.entries(audioAssets)) {
             const audio = new Audio(path);
             audio.preload = 'auto';
+            if (key === 'gameplay') audio.loop = true;
             this.sounds[key] = audio;
         }
 
@@ -51,18 +66,26 @@ class AudioManager {
         this.playSound('right');
     }
 
-    /**
-     * Play sound khi chuyển sang câu tiếp theo
-     */
-    playNextQuestion() {
-        this.playSound('nextQuestion');
+    playGameplay() {
+        this.playSound('gameplay');
     }
 
-    /**
-     * Play sound khi kết thúc game
-     */
-    playFinalRound() {
-        this.playSound('finalRound');
+    stopGameplay() {
+        const gameplayAudio = this.sounds.gameplay;
+        if (!gameplayAudio) return;
+
+        gameplayAudio.pause();
+        gameplayAudio.currentTime = 0;
+    }
+
+    playResult(resultIndex) {
+        const soundKey = RESULT_AUDIO_BY_INDEX[resultIndex];
+        if (!soundKey) {
+            console.warn(`Không có audio result cho index: ${resultIndex}`);
+            return;
+        }
+
+        this.playSound(soundKey);
     }
 
     /**
@@ -85,3 +108,7 @@ class AudioManager {
 
 // Khởi tạo audioManager khi cần (được gọi trong main.js)
 let audioManager = null;
+
+if (typeof module !== 'undefined') {
+    module.exports = { AudioManager, RESULT_AUDIO_BY_INDEX };
+}

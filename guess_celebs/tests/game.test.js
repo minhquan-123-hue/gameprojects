@@ -4,6 +4,7 @@ const test = require('node:test');
 const { parseQuizContent } = require('../src/data/quizContentLoader.js');
 const { QuestionSelector } = require('../src/data/questionSelector.js');
 const { Endgame, RESULT_TITLES } = require('../src/js/endgame.js');
+const { AudioManager, RESULT_AUDIO_BY_INDEX } = require('../src/js/audioManager.js');
 
 function contentFor(questionBlock) {
     return `images/\ncharacters/\n- test.png:\nimage: ../assets/images/test.png\ncharacter: test\n${questionBlock}`;
@@ -146,7 +147,6 @@ test('gameplay: completes a seven-question round after the final answer', () => 
     global.audioManager = {
         playCorrect() {},
         playWrong() {},
-        playNextQuestion() {},
         playFinalRound() {}
     };
     const { Quiz } = require('../src/js/quiz.js');
@@ -184,6 +184,74 @@ test('result scoring: scores 0-2 share the first result and 5-7 use the highest 
     assert.equal(endgame.getResultData(5), RESULT_TITLES[5]);
     assert.equal(endgame.getResultData(6), RESULT_TITLES[5]);
     assert.equal(endgame.getResultData(7), RESULT_TITLES[5]);
+});
+
+test('audio: maps gameplay and every result index to the configured audio', () => {
+    const createdAudio = [];
+    global.Audio = class {
+        constructor(path) {
+            this.path = path;
+            this.currentTime = 0;
+            this.loop = false;
+            this.paused = false;
+            createdAudio.push(this);
+        }
+
+        play() {
+            this.paused = false;
+            return { catch() {} };
+        }
+
+        pause() {
+            this.paused = true;
+        }
+    };
+
+    const audioManager = new AudioManager();
+    const playedKeys = [];
+    audioManager.playSound = key => playedKeys.push(key);
+
+    audioManager.playGameplay();
+    Object.keys(RESULT_AUDIO_BY_INDEX).forEach(index => audioManager.playResult(index));
+
+    assert.deepEqual(playedKeys, [
+        'gameplay',
+        'cum_fast',
+        'dream_cum',
+        'half_ass',
+        'cum_pant',
+        'an_ba_to_cum',
+        'king_cum'
+    ]);
+    assert.ok(createdAudio.some(audio => audio.path.endsWith('/jazz.wav')));
+});
+
+test('audio: gameplay jazz loops and can be stopped cleanly', () => {
+    const audioManager = new AudioManager();
+    const gameplayAudio = audioManager.sounds.gameplay;
+
+    audioManager.playGameplay();
+    gameplayAudio.currentTime = 12;
+    audioManager.stopGameplay();
+
+    assert.equal(gameplayAudio.loop, true);
+    assert.equal(gameplayAudio.paused, true);
+    assert.equal(gameplayAudio.currentTime, 0);
+});
+
+test('endgame: plays audio using the resolved result index', () => {
+    const playedIndexes = [];
+    global.audioManager = {
+        playResult(index) {
+            playedIndexes.push(index);
+        }
+    };
+    const ui = { renderResult() {} };
+    const endgame = new Endgame(RESULT_TITLES, ui);
+
+    endgame.showResults(3, 7);
+
+    assert.deepEqual(playedIndexes, [3]);
 });
 
 class FakeElement {

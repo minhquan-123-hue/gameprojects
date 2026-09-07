@@ -90,6 +90,10 @@ body.screen-result {
     margin-top: 15px;
 }
 
+.btn-start {
+    width: 100%;
+}
+
 .btn-start:hover,
 .btn-introduction:hover,
 .btn-introduction-close:hover {

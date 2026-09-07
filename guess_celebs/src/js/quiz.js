@@ -116,10 +116,6 @@ class Quiz {
             return;
         }
 
-        // Play Mon Wave sound khi chuyển câu
-        if (typeof audioManager !== 'undefined' && audioManager) {
-            audioManager.playNextQuestion();
-        }
         this.loadQuestion(this.currentQuestion + 1);
     }
 

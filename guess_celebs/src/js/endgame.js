@@ -23,7 +23,7 @@ const RESULT_TITLES = {
     },
     3: {
         title: '🥵',
-        message: 'Dái lắm lông , xuất tinh vào quần sịp xong đi ngủ'
+        message: 'Dái lắm lông , xuất tinh vào sịp xong đi ngủ'
     },
     4: {
         title: '🤡',
@@ -48,22 +48,26 @@ class Endgame {
         this.ui = ui;
     }
 
-    getResultData(score) {
+    getResultIndex(score) {
         const band = RESULT_SCORE_BANDS.find(({ maxScore }) => score <= maxScore);
-        const resultKey = band ? band.resultKey : RESULT_SCORE_BANDS.at(-1).resultKey;
-        return this.resultTitles[resultKey];
+        return band ? band.resultKey : RESULT_SCORE_BANDS.at(-1).resultKey;
+    }
+
+    getResultData(score) {
+        return this.resultTitles[this.getResultIndex(score)];
     }
 
     /**
      * Hiển thị kết quả game
      */
     showResults(score, totalQuestions) {
-        const resultData = this.getResultData(score);
+        const resultIndex = this.getResultIndex(score);
+        const resultData = this.resultTitles[resultIndex];
 
         this.ui.renderResult(resultData, score, totalQuestions);
 
-        if (audioManager) {
-            audioManager.playFinalRound();
+        if (typeof audioManager !== 'undefined' && audioManager) {
+            audioManager.playResult(resultIndex);
         }
     }
 
