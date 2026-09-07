@@ -106,6 +106,7 @@ function parseQuizContent(markdown) {
     const lines = markdown.split(/\r?\n/);
     let currentEntry = null;
     let currentQuestion = null;
+    let currentCategory = null;
 
     const recordQuestionError = (reason) => {
         const questionText = currentQuestion?.question || '(không có nội dung question)';
@@ -164,6 +165,13 @@ function parseQuizContent(markdown) {
             return;
         }
 
+        if (!currentEntry.category) {
+            validationErrors.push(`[${currentEntry.filename}] thiếu category`);
+            console.warn(`Quiz content skipped entry: [${currentEntry.filename}] thiếu category`);
+            currentEntry = null;
+            return;
+        }
+
         if (currentEntry.questions.length === 0) {
             validationErrors.push(`[${currentEntry.filename}] không có question hợp lệ`);
             console.warn(`Quiz content skipped entry: [${currentEntry.filename}] không có question hợp lệ`);
@@ -172,6 +180,7 @@ function parseQuizContent(markdown) {
         }
 
         entries.push({
+            category: currentEntry.category,
             character: currentEntry.character,
             image: currentEntry.image,
             questions: currentEntry.questions
@@ -183,6 +192,12 @@ function parseQuizContent(markdown) {
         const line = rawLine.trim();
         if (!line) continue;
 
+        const categoryMatch = line.match(/^([a-z0-9_-]+)\/$/i);
+        if (categoryMatch && categoryMatch[1].toLowerCase() !== 'images') {
+            currentCategory = categoryMatch[1].toLowerCase();
+            continue;
+        }
+
         const imageMatch = line.match(/^-\s*([^\s]+\.png)\s*:\s*$/i);
         if (imageMatch) {
             finishEntry();
@@ -190,6 +205,7 @@ function parseQuizContent(markdown) {
                 filename: imageMatch[1],
                 image: null,
                 character: null,
+                category: currentCategory,
                 questions: []
             };
             continue;

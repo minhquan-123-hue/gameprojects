@@ -15,8 +15,12 @@ class Quiz {
         this.quizData = quizData;
         this.resultTitles = resultTitles;
         this.ui = ui;
-        this.selectedCharacters = [];
-        this.totalQuestions = GAME_CONFIG.questionCount;
+        this.selectedQuestions = [];
+        this.questionSelector = new QuestionSelector(
+            quizData,
+            GAME_CONFIG.questionsPerCategory
+        );
+        this.totalQuestions = this.getRoundQuestionCount();
         this.currentQuestion = 0;
         this.scores = {
             dick: 0,
@@ -45,37 +49,27 @@ class Quiz {
     }
 
     /**
-     * Tạo một lượt chơi mới:
-    * - Chọn số nhân vật theo GAME_CONFIG.
-     * - Với mỗi nhân vật, chọn ngẫu nhiên 1 trong 2 câu hỏi.
+     * Tạo một lượt chơi mới theo quota từng category.
      */
     createRound() {
-        const shuffledCharacters = [...this.quizData].sort(() => Math.random() - 0.5);
-        this.selectedCharacters = shuffledCharacters.slice(0, GAME_CONFIG.questionCount).map(character => {
-            const questionIndex = Math.floor(Math.random() * character.questions.length);
-            return {
-                ...character,
-                selectedQuestion: character.questions[questionIndex]
-            };
-        });
-        this.totalQuestions = this.selectedCharacters.length;
+        this.selectedQuestions = this.questionSelector.createRound();
+        this.totalQuestions = this.selectedQuestions.length;
     }
 
     /**
      * Tải câu hỏi hiện tại
      */
     loadQuestion(index) {
-        if (index >= this.selectedCharacters.length) {
+        if (index >= this.selectedQuestions.length) {
             this.endQuiz();
             return;
         }
 
-        const character = this.selectedCharacters[index];
-        const question = character.selectedQuestion;
+        const question = this.selectedQuestions[index];
         this.currentQuestion = index;
         this.answered = false;
 
-        this.ui.renderQuestion(character, question, this.currentQuestion, this.totalQuestions);
+        this.ui.renderQuestion(question, question, this.currentQuestion, this.totalQuestions);
     }
 
     /**
@@ -85,7 +79,7 @@ class Quiz {
         if (this.answered) return;
 
         this.answered = true;
-        const question = this.selectedCharacters[this.currentQuestion].selectedQuestion;
+        const question = this.selectedQuestions[this.currentQuestion];
 
         // Kiểm tra đáp án
         if (selectedIndex === question.correctIndex) {
@@ -148,8 +142,12 @@ class Quiz {
      * Loading câu hỏi đầu sẽ xảy ra khi startGame() được gọi
      */
     resetState() {
-        this.selectedCharacters = [];
-        this.totalQuestions = GAME_CONFIG.questionCount;
+        this.selectedQuestions = [];
+        this.questionSelector = new QuestionSelector(
+            this.quizData,
+            GAME_CONFIG.questionsPerCategory
+        );
+        this.totalQuestions = this.getRoundQuestionCount();
         this.currentQuestion = 0;
         this.scores = { dick: 0, pussy: 0, master: 0 };
         this.answered = false;
@@ -163,10 +161,15 @@ class Quiz {
      * setupEventListeners() đã được gọi trong init()
      */
     startGame() {
-        console.log(`Game started - creating a new ${GAME_CONFIG.questionCount}-question round`);
+        console.log(`Game started - creating a new ${this.getRoundQuestionCount()}-question round`);
         this.createRound();
         this.ui.renderScores(this.scores);
         this.loadQuestion(0);
+    }
+
+    getRoundQuestionCount() {
+        return Object.values(GAME_CONFIG.questionsPerCategory)
+            .reduce((total, count) => total + count, 0);
     }
 }
 

@@ -2,9 +2,10 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const { parseQuizContent } = require('../src/data/quizContentLoader.js');
+const { QuestionSelector } = require('../src/data/questionSelector.js');
 
 function contentFor(questionBlock) {
-    return `images/\n- test.png:\nimage: ../assets/images/test.png\ncharacter: test\n${questionBlock}`;
+    return `images/\ncharacters/\n- test.png:\nimage: ../assets/images/test.png\ncharacter: test\n${questionBlock}`;
 }
 
 function validQuestion(answer = 'right answer') {
@@ -19,6 +20,7 @@ test('content: accepts a valid question', () => {
     const result = parseQuizContent(contentFor(validQuestion()));
 
     assert.equal(result.entries.length, 1);
+    assert.equal(result.entries[0].category, 'characters');
     assert.equal(result.entries[0].questions.length, 1);
     assert.equal(result.entries[0].questions[0].correctIndex, 1);
     assert.equal(result.validationErrors.length, 0);
@@ -48,12 +50,55 @@ test('content: skips a question with an unknown answer', () => {
 
 test('content: skips a character with no valid question', () => {
     const result = parseQuizContent(
-        'images/\n- empty.png:\nimage: ../assets/images/empty.png\ncharacter: empty\n'
+        'images/\ncharacters/\n- empty.png:\nimage: ../assets/images/empty.png\ncharacter: empty\n'
     );
 
     assert.equal(result.entries.length, 0);
     assert.equal(result.validationErrors.length, 1);
     assert.match(result.validationErrors[0], /không có question hợp lệ/);
+});
+
+function entry(category, character, questionCount = 2) {
+    return {
+        category,
+        character,
+        image: `${character}.png`,
+        questions: Array.from({ length: questionCount }, (_, index) => ({
+            question: `${character}-${index}`,
+            answers: ['a', 'b', 'c', 'd'],
+            correctIndex: 0
+        }))
+    };
+}
+
+test('selector: follows category quota and avoids duplicate characters per round', () => {
+    const selector = new QuestionSelector([
+        entry('characters', 'one'),
+        entry('characters', 'two'),
+        entry('characters', 'three'),
+        entry('characters', 'four'),
+        entry('illness', 'one'),
+        entry('illness', 'five')
+    ], { characters: 3, illness: 1 }, () => 0);
+
+    const round = selector.createRound();
+    assert.equal(round.length, 4);
+    assert.equal(new Set(round.map(question => question.character)).size, 4);
+});
+
+test('selector: replenishes an exhausted category pool', () => {
+    const selector = new QuestionSelector([
+        entry('illness', 'hiv', 1),
+        entry('illness', 'syphilis', 1)
+    ], { illness: 1 }, () => 0);
+
+    const firstRound = selector.createRound();
+    const secondRound = selector.createRound();
+    const thirdRound = selector.createRound();
+
+    assert.equal(firstRound[0].character, 'hiv');
+    assert.equal(secondRound[0].character, 'syphilis');
+    assert.equal(thirdRound[0].character, 'hiv');
 });
 
 class FakeElement {
