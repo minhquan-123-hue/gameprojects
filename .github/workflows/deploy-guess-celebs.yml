@@ -1,0 +1,69 @@
+name: Deploy Guess Celebs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'guess_celebs/**'
+      - '.github/workflows/deploy-guess-celebs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Pages site
+        run: |
+          mkdir -p _site
+          cp -R guess_celebs _site/guess_celebs
+
+          cat > _site/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Guess Celebs</title>
+            <style>
+              html, body, iframe {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                border: 0;
+                overflow: hidden;
+              }
+            </style>
+          </head>
+          <body>
+            <iframe src="guess_celebs/src/index.html" title="Guess Celebs"></iframe>
+          </body>
+          </html>
+          EOF
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
